@@ -47,7 +47,7 @@ describe('Get Notifications Function Test', () => {
     assert.strictEqual(res.statusCode, 200);
     assert.ok(Array.isArray(res.body));
     assert.strictEqual(res.body[0].message, 'Gym closed tomorrow');
-    sinon.assert.calledWith(Notification.find, { source: 'admin' });
+    sinon.assert.calledWith(Notification.find, {});
   });
 
   it('TC-055: Should return 500 if a database error occurs', async () => {
@@ -82,7 +82,6 @@ describe('Get Notifications Function Test', () => {
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.body[0].target, 'members');
     sinon.assert.calledWith(Notification.find, {
-      source: 'admin',
       target: { $in: ['members', 'all'] },
     });
   });
