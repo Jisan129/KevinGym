@@ -69,6 +69,22 @@ describe('Get Notifications Function Test', () => {
     sinon.assert.calledWith(Notification.find, {});
   });
 
+  it('TC-054c: Members see admin announcements and notifications addressed to them', async () => {
+    sinon.stub(Notification, 'find').returns({
+      sort: sinon.stub().resolves([]),
+    });
+
+    const req = { query: {}, user: { role: 'member', id: 'user-42' } };
+    const res = createMockRes();
+
+    await getNotifications(req, res);
+
+    assert.strictEqual(res.statusCode, 200);
+    sinon.assert.calledWith(Notification.find, {
+      $or: [{ source: 'admin' }, { recipientId: 'user-42' }],
+    });
+  });
+
   it('TC-055: Should return 500 if a database error occurs', async () => {
     sinon.stub(Notification, 'find').throws(new Error('Database connection failed'));
 
