@@ -1,9 +1,9 @@
 const express = require('express');
 const { getMembers, updateMembership } = require('../controllers/membershipController');
-const { protect, requireVendor } = require('../middleware/authMiddleware');
+const { protect, requireAdmin } = require('../middleware/authMiddleware');
 const router = express.Router();
 
-router.get('/', protect, requireVendor, getMembers);
-router.put('/:id', protect, requireVendor, updateMembership);
+router.get('/', protect, requireAdmin, getMembers);
+router.put('/:id', protect, requireAdmin, updateMembership);
 
 module.exports = router;
