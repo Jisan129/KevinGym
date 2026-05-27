@@ -47,6 +47,25 @@ describe('Get Notifications Function Test', () => {
     assert.strictEqual(res.statusCode, 200);
     assert.ok(Array.isArray(res.body));
     assert.strictEqual(res.body[0].message, 'Gym closed tomorrow');
+    sinon.assert.calledWith(Notification.find, { source: 'admin' });
+  });
+
+  it('TC-054b: Admins see all notifications (no source filter)', async () => {
+    const notifications = [
+      { id: 'n001', message: 'Gym closed tomorrow', target: 'all', source: 'admin' },
+      { id: 'n002', message: 'User profile updated: Kevin', target: 'all', source: 'system' },
+    ];
+    sinon.stub(Notification, 'find').returns({
+      sort: sinon.stub().resolves(notifications),
+    });
+
+    const req = { query: {}, user: { role: 'admin' } };
+    const res = createMockRes();
+
+    await getNotifications(req, res);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.length, 2);
     sinon.assert.calledWith(Notification.find, {});
   });
 
@@ -83,6 +102,7 @@ describe('Get Notifications Function Test', () => {
     assert.strictEqual(res.body[0].target, 'members');
     sinon.assert.calledWith(Notification.find, {
       target: { $in: ['members', 'all'] },
+      source: 'admin',
     });
   });
 });
