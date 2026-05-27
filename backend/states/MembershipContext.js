@@ -1,11 +1,11 @@
-const IronState = require('./IronState');
-const SilverState = require('./SilverState');
-const GoldState = require('./GoldState');
+const TrialState = require('./TrialState');
+const ActiveState = require('./ActiveState');
+const ExpiredState = require('./ExpiredState');
 
-const STATE_MAP = { Iron: IronState, Silver: SilverState, Gold: GoldState };
+const STATE_MAP = { Trial: TrialState, Active: ActiveState, Expired: ExpiredState };
 
 class MembershipContext {
-  constructor(stateName = 'Iron') {
+  constructor(stateName = 'Trial') {
     const StateClass = STATE_MAP[stateName];
     if (!StateClass) throw new Error(`Unknown membership state: ${stateName}`);
     this.state = new StateClass();

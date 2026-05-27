@@ -295,22 +295,22 @@ const VendorPanel = () => {
                   <td className="px-4 py-2 text-gray-500">{m.email}</td>
                   <td className="px-4 py-2">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      m.membershipStatus === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
-                      m.membershipStatus === 'Silver' ? 'bg-gray-100 text-gray-600' :
-                      'bg-orange-100 text-orange-700'
+                      m.membershipStatus === 'Active' ? 'bg-green-100 text-green-700' :
+                      m.membershipStatus === 'Expired' ? 'bg-red-100 text-red-600' :
+                      'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {m.membershipStatus || 'Iron'}
+                      {m.membershipStatus || 'Trial'}
                     </span>
                   </td>
                   <td className="px-4 py-2">
                     <select
-                      value={m.membershipStatus || 'Iron'}
+                      value={m.membershipStatus || 'Trial'}
                       onChange={(e) => handleMembershipChange(m._id, e.target.value)}
                       className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none"
                     >
-                      <option value="Iron">Iron</option>
-                      <option value="Silver">Silver</option>
-                      <option value="Gold">Gold</option>
+                      <option value="Trial">Trial</option>
+                      <option value="Active">Active</option>
+                      <option value="Expired">Expired</option>
                     </select>
                   </td>
                 </tr>

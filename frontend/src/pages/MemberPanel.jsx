@@ -64,7 +64,7 @@ const MemberPanel = () => {
         const response = await axiosInstance.get('/api/auth/profile', {
           headers: { Authorization: `Bearer ${user.token}` },
         });
-        setMembershipType(response.data.membershipStatus || 'Iron');
+        setMembershipType(response.data.membershipStatus || 'Trial');
       } catch {}
     };
     if (user) fetchMembership();
@@ -277,16 +277,16 @@ const MemberPanel = () => {
           </div>
           <div className="p-6 flex items-center gap-4">
             <span className={`px-5 py-2 rounded-full text-sm font-semibold ${
-              membershipType === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
-              membershipType === 'Silver' ? 'bg-gray-100 text-gray-600' :
-              'bg-orange-100 text-orange-700'
+              membershipType === 'Active' ? 'bg-green-100 text-green-700' :
+              membershipType === 'Expired' ? 'bg-red-100 text-red-600' :
+              'bg-yellow-100 text-yellow-700'
             }`}>
-              {membershipType || 'Iron'}
+              {membershipType || 'Trial'}
             </span>
             <p className="text-sm text-gray-500">
-              {membershipType === 'Gold' && 'Premium membership — full access to all classes and content.'}
-              {membershipType === 'Silver' && 'Standard membership — book classes and access content.'}
-              {(!membershipType || membershipType === 'Iron') && 'Basic membership — browse content only.'}
+              {membershipType === 'Active' && 'Active membership — full access to classes and content.'}
+              {membershipType === 'Expired' && 'Expired membership — please renew to regain access.'}
+              {(!membershipType || membershipType === 'Trial') && 'Trial membership — browse content only.'}
             </p>
           </div>
         </div>
