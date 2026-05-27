@@ -3,7 +3,7 @@ const MembershipContext = require('../states/MembershipContext');
 
 const getMembers = async (req, res) => {
   try {
-    const members = await User.find({ role: 'member' }).select('name email membershipStatus');
+    const members = await User.find({ role: { $in: ['member', 'vendor'] } }).select('name email membershipStatus');
     res.json(members);
   } catch (error) {
     res.status(500).json({ message: error.message });
