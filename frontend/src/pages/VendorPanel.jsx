@@ -25,12 +25,30 @@ const STUDIOS = ['Happy Yoga Studio', 'Studio A', 'Studio B', 'Spin Room', 'Yoga
 const VendorPanel = () => {
   const { user } = useAuth();
   const [form, setForm] = useState({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
+  const [members, setMembers] = useState([]);
   const [courses, setCourses] = useState(PUBLISHED_COURSES);
   const [selected, setSelected] = useState(null);
 
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [selectedNotif, setSelectedNotif] = useState(null);
   const [flaggedNotifs, setFlaggedNotifs] = useState(new Set());
+
+  useEffect(() => {
+    axiosInstance.get('/api/membership', {
+      headers: { Authorization: `Bearer ${user?.token}` },
+    }).then(res => setMembers(res.data)).catch(() => {});
+  }, [user]);
+
+  const handleMembershipChange = async (memberId, newStatus) => {
+    try {
+      const res = await axiosInstance.put(`/api/membership/${memberId}`, { membershipStatus: newStatus }, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      setMembers(prev => prev.map(m => m._id === memberId ? { ...m, membershipStatus: res.data.membershipStatus } : m));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update membership.');
+    }
+  };
 
   useEffect(() => {
     axiosInstance.get('/api/notifications', {
@@ -256,6 +274,55 @@ const VendorPanel = () => {
         </div>
 
       </div>
+
+      {/* Manage Memberships */}
+      <div className="px-8 pb-8">
+        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+          <div className={cardHeader}>Manage Member Memberships</div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-left px-4 py-2 font-semibold text-gray-700">Name</th>
+                <th className="text-left px-4 py-2 font-semibold text-gray-700">Email</th>
+                <th className="text-left px-4 py-2 font-semibold text-gray-700">Status</th>
+                <th className="text-left px-4 py-2 font-semibold text-gray-700">Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m, i) => (
+                <tr key={m._id} className={i % 2 === 1 ? 'bg-gray-50' : ''}>
+                  <td className="px-4 py-2 text-gray-700">{m.name}</td>
+                  <td className="px-4 py-2 text-gray-500">{m.email}</td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      m.membershipStatus === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
+                      m.membershipStatus === 'Silver' ? 'bg-gray-100 text-gray-600' :
+                      'bg-orange-100 text-orange-700'
+                    }`}>
+                      {m.membershipStatus || 'Iron'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <select
+                      value={m.membershipStatus || 'Iron'}
+                      onChange={(e) => handleMembershipChange(m._id, e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none"
+                    >
+                      <option value="Iron">Iron</option>
+                      <option value="Silver">Silver</option>
+                      <option value="Gold">Gold</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {members.length === 0 && (
+                <tr><td colSpan={4} className="px-4 py-4 text-center text-gray-400">No members found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 };

@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     university: { type: String },
     address: { type: String },
     role: { type: String, enum: ['member', 'admin', 'vendor'], default: 'member', required: true },
+    membershipStatus: { type: String, enum: ['Iron', 'Silver', 'Gold'], default: 'Iron' },
 });
 
 userSchema.pre('save', async function (next) {

@@ -28,6 +28,7 @@ const MemberPanel = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '' });
   const [membershipStatus] = useState('Active');
+  const [membershipType, setMembershipType] = useState(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -55,6 +56,18 @@ const MemberPanel = () => {
       }
     };
     if (user) fetchProfile();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchMembership = async () => {
+      try {
+        const response = await axiosInstance.get('/api/auth/profile', {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        setMembershipType(response.data.membershipStatus || 'Iron');
+      } catch {}
+    };
+    if (user) fetchMembership();
   }, [user]);
 
   const handleSave = async () => {
@@ -255,6 +268,30 @@ const MemberPanel = () => {
         </div>
 
       </div>
+
+      {/* Membership Type */}
+      <div className="px-8 pb-8">
+        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+          <div className="bg-gray-100 border-b border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">
+            Membership Type
+          </div>
+          <div className="p-6 flex items-center gap-4">
+            <span className={`px-5 py-2 rounded-full text-sm font-semibold ${
+              membershipType === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
+              membershipType === 'Silver' ? 'bg-gray-100 text-gray-600' :
+              'bg-orange-100 text-orange-700'
+            }`}>
+              {membershipType || 'Iron'}
+            </span>
+            <p className="text-sm text-gray-500">
+              {membershipType === 'Gold' && 'Premium membership — full access to all classes and content.'}
+              {membershipType === 'Silver' && 'Standard membership — book classes and access content.'}
+              {(!membershipType || membershipType === 'Iron') && 'Basic membership — browse content only.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };
