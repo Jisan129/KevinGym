@@ -380,20 +380,6 @@ const VendorPanel = () => {
                     onChange={e => updateExercise(i, 'name', e.target.value)}
                     className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green"
                   />
-                  <input
-                    type="number"
-                    placeholder="Sets"
-                    value={ex.sets}
-                    onChange={e => updateExercise(i, 'sets', parseInt(e.target.value, 10))}
-                    className="w-14 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Reps"
-                    value={ex.reps}
-                    onChange={e => updateExercise(i, 'reps', e.target.value)}
-                    className="w-16 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green"
-                  />
                   <button
                     onClick={() => setExercises(prev => prev.filter((_, idx) => idx !== i))}
                     className="text-red-400 hover:text-red-600 text-sm px-1"
