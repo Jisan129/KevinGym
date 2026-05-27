@@ -10,7 +10,7 @@ const Profile = () => {
     university: '',
     address: '',
   });
-  const [membershipStatus, setMembershipStatus] = useState('Iron');
+  const [membershipStatus, setMembershipStatus] = useState('Trial');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ const Profile = () => {
           university: response.data.university || '',
           address: response.data.address || '',
         });
-        setMembershipStatus(response.data.membershipStatus || 'Iron');
+        setMembershipStatus(response.data.membershipStatus || 'Trial');
       } catch (error) {
         alert('Failed to fetch profile. Please try again.');
       } finally {
@@ -63,9 +63,9 @@ const Profile = () => {
         <h1 className="text-2xl font-bold mb-4 text-center">Your Profile</h1>
         <div className="flex justify-center mb-4">
           <span className={`px-4 py-1 rounded-full text-sm font-semibold ${
-            membershipStatus === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
-            membershipStatus === 'Silver' ? 'bg-gray-100 text-gray-600' :
-            'bg-orange-100 text-orange-700'
+            membershipStatus === 'Active' ? 'bg-green-100 text-green-700' :
+            membershipStatus === 'Expired' ? 'bg-red-100 text-red-600' :
+            'bg-yellow-100 text-yellow-700'
           }`}>
             {membershipStatus} Member
           </span>

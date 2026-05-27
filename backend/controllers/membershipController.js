@@ -16,7 +16,7 @@ const updateMembership = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const { membershipStatus } = req.body;
-    const ctx = new MembershipContext(user.membershipStatus || 'Iron');
+    const ctx = new MembershipContext(user.membershipStatus || 'Trial');
     ctx.transitionTo(membershipStatus);
 
     user.membershipStatus = ctx.getName();

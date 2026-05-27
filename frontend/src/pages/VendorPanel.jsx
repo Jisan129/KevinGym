@@ -2,42 +2,129 @@ import { useState, useEffect } from 'react';
 import axiosInstance from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 
-const PUBLISHED_COURSES = [
-  { course: 'Power Yoga',         schedule: 'Mon / Wed', time: '7:00 AM'  },
-  { course: 'Stretch & Restore',  schedule: 'Tue / Thu', time: '1:00 PM'  },
-  { course: 'Vinyasa Flow',       schedule: 'Wed / Fri', time: '9:00 AM'  },
-  { course: 'Morning Meditation', schedule: 'Daily',     time: '6:30 AM'  },
-  { course: 'Core & Balance',     schedule: 'Mon / Fri', time: '11:00 AM' },
-  { course: 'Hot Yoga Basics',    schedule: 'Sat',       time: '8:00 AM'  },
-];
 
 const INITIAL_NOTIFICATIONS = [
-  { message: 'Power Yoga booking confirmed: Sarah Mitchell', date: 'Mar 23' },
-  { message: 'Class cancelled by member: James Thornton',   date: 'Mar 23' },
-  { message: 'New review posted for Vinyasa Flow',          date: 'Mar 22' },
-  { message: 'Schedule conflict flagged: Wed 9:00 AM',      date: 'Mar 22' },
-  { message: 'Admin approved: Morning Meditation listing',  date: 'Mar 21' },
-  { message: 'Payout processed: $340.00',                   date: 'Mar 20' },
+  { datetime: 'Mar 23 · 9:00 AM',  content: 'Power Yoga booking confirmed: Sarah Mitchell' },
+  { datetime: 'Mar 23 · 11:30 AM', content: 'Class cancelled by member: James Thornton'   },
+  { datetime: 'Mar 22 · 2:00 PM',  content: 'New review posted for Vinyasa Flow'          },
+  { datetime: 'Mar 22 · 4:15 PM',  content: 'Schedule conflict flagged: Wed 9:00 AM'      },
+  { datetime: 'Mar 21 · 10:00 AM', content: 'Admin approved: Morning Meditation listing'  },
+  { datetime: 'Mar 20 · 3:00 PM',  content: 'Payout processed: $340.00'                   },
 ];
 
 const STUDIOS = ['Happy Yoga Studio', 'Studio A', 'Studio B', 'Spin Room', 'Yoga Loft'];
 
+const EMPTY_EXERCISE = { name: '', sets: 3, reps: '10', notes: '' };
+
 const VendorPanel = () => {
   const { user } = useAuth();
   const [form, setForm] = useState({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
-  const [members, setMembers] = useState([]);
-  const [courses, setCourses] = useState(PUBLISHED_COURSES);
+  const [courses, setCourses] = useState([]);
   const [selected, setSelected] = useState(null);
+
+  const [members, setMembers] = useState([]);
 
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [selectedNotif, setSelectedNotif] = useState(null);
   const [flaggedNotifs, setFlaggedNotifs] = useState(new Set());
+
+  const [planForm, setPlanForm] = useState({
+    memberEmail: '', title: '', difficulty: 'beginner', durationWeeks: 4, notes: '',
+  });
+  const [exercises, setExercises] = useState([{ ...EMPTY_EXERCISE }]);
+  const [planStatus, setPlanStatus] = useState('');
+
+  useEffect(() => {
+    axiosInstance.get('/api/courses', {
+      headers: { Authorization: `Bearer ${user?.token}` },
+    }).then(res => {
+      const mine = res.data
+        .filter(c => c.vendorId === user?.id)
+        .map(c => ({ _id: c._id, course: c.name, schedule: c.schedule, time: c.time || '—', description: c.description || '', studio: c.studio || '' }));
+      setCourses(mine);
+    }).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     axiosInstance.get('/api/membership', {
       headers: { Authorization: `Bearer ${user?.token}` },
     }).then(res => setMembers(res.data)).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    axiosInstance.get('/api/notifications?target=vendors', {
+      headers: { Authorization: `Bearer ${user?.token}` },
+    }).then(res => {
+      const fetched = res.data.map(n => ({
+        datetime: new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+          ' · ' + new Date(n.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        content: n.message,
+      }));
+      setNotifications(fetched);
+    }).catch(() => {});
+  }, [user]);
+
+  const handleCreate = async () => {
+    if (!form.course || !form.date) return;
+    try {
+      const res = await axiosInstance.post('/api/courses', {
+        name: form.course,
+        schedule: form.date,
+        time: form.time,
+        description: form.description,
+        studio: form.studio,
+      }, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      const c = res.data;
+      setCourses([...courses, { _id: c._id, course: c.name, schedule: c.schedule, time: c.time || '—', description: c.description || '', studio: c.studio || '' }]);
+      setForm({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create course.');
+    }
+  };
+
+  const handleSave = async () => {
+    if (selected === null) return;
+    const courseId = courses[selected]._id;
+    try {
+      const res = await axiosInstance.put(`/api/courses/${courseId}`, {
+        name: form.course,
+        schedule: form.date,
+        time: form.time,
+        description: form.description,
+        studio: form.studio,
+      }, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      const c = res.data;
+      setCourses(courses.map((item, i) => i === selected ? { _id: c._id, course: c.name, schedule: c.schedule, time: c.time || '—', description: c.description || '', studio: c.studio || '' } : item));
+      setSelected(null);
+      setForm({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update course.');
+    }
+  };
+
+  const handleSelectForEdit = (i) => {
+    setSelected(i);
+    setForm({ course: courses[i].course, date: courses[i].schedule, time: courses[i].time, description: courses[i].description || '', studio: courses[i].studio || STUDIOS[0] });
+  };
+
+  const handleDelete = async () => {
+    if (selected === null || selected === undefined) return;
+    const courseId = courses[selected]._id;
+    try {
+      await axiosInstance.delete(`/api/courses/${courseId}`, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      });
+      setCourses(courses.filter((_, i) => i !== selected));
+      setSelected(null);
+      setForm({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete course.');
+    }
+  };
 
   const handleMembershipChange = async (memberId, newStatus) => {
     try {
@@ -50,55 +137,26 @@ const VendorPanel = () => {
     }
   };
 
-  useEffect(() => {
-    axiosInstance.get('/api/notifications', {
-      headers: { Authorization: `Bearer ${user?.token}` },
-    }).then(res => {
-      const fetched = res.data.map(n => ({
-        message: n.message,
-        date: new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      }));
-      setNotifications(fetched);
-    }).catch(() => {});
-  }, [user]);
-
-  const handleCreate = async () => {
-    if (!form.course || !form.date) return;
+  const handleAssignPlan = async () => {
+    if (!planForm.memberEmail || !planForm.title || exercises.every(e => !e.name)) {
+      return setPlanStatus('Please fill in member email, plan title, and at least one exercise.');
+    }
     try {
-      await axiosInstance.post('/api/courses', {
-        name: form.course,
-        schedule: form.date,
-        time: form.time,
-        description: form.description,
-        studio: form.studio,
-      }, {
-        headers: { Authorization: `Bearer ${user?.token}` },
-      });
-      setCourses([...courses, { course: form.course, schedule: form.date, time: form.time || '—' }]);
-      setForm({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create course.');
+      await axiosInstance.post('/api/workout-plans', {
+        ...planForm,
+        durationWeeks: parseInt(planForm.durationWeeks, 10),
+        exercises: exercises.filter(e => e.name),
+      }, { headers: { Authorization: `Bearer ${user?.token}` } });
+      setPlanStatus(`Plan "${planForm.title}" assigned successfully.`);
+      setPlanForm({ memberEmail: '', title: '', difficulty: 'beginner', durationWeeks: 4, notes: '' });
+      setExercises([{ ...EMPTY_EXERCISE }]);
+    } catch (e) {
+      setPlanStatus(e.response?.data?.message || 'Failed to assign plan.');
     }
   };
 
-  const handleSave = () => {
-    if (!selected) return;
-    setCourses(courses.map((c, i) => i === selected ? { ...c, course: form.course, schedule: form.date, time: form.time } : c));
-    setSelected(null);
-    setForm({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
-  };
-
-  const handleSelectForEdit = (i) => {
-    setSelected(i);
-    setForm({ course: courses[i].course, date: courses[i].schedule, time: courses[i].time, description: '', studio: STUDIOS[0] });
-  };
-
-  const handleDelete = () => {
-    if (selected === null) return;
-    setCourses(courses.filter((_, i) => i !== selected));
-    setSelected(null);
-    setForm({ course: '', date: '', time: '', description: '', studio: STUDIOS[0] });
-  };
+  const updateExercise = (i, field, value) =>
+    setExercises(prev => prev.map((ex, idx) => idx === i ? { ...ex, [field]: value } : ex));
 
   const inputClass = 'w-full px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green';
   const cardHeader = 'bg-gray-100 border-b border-gray-300 px-4 py-2 text-sm font-medium text-gray-700';
@@ -108,7 +166,6 @@ const VendorPanel = () => {
       {/* Hero */}
       <div className="px-8 py-5 border-b border-gray-200">
         <h1 className="text-2xl font-semibold text-gray-800">Course Vendor Panel</h1>
-        <p className="text-sm text-gray-500 mt-1">Add new courses, manage your published listings, and view notifications.</p>
       </div>
 
       {/* Three-column layout */}
@@ -116,7 +173,7 @@ const VendorPanel = () => {
 
         {/* Add / Edit Course */}
         <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-          <div className={cardHeader}>Create Course</div>
+          <div className={cardHeader}>Gym Course</div>
           <div className="p-4 space-y-3">
             <input
               type="text"
@@ -189,8 +246,8 @@ const VendorPanel = () => {
               {courses.map((c, i) => (
                 <tr
                   key={i}
-                  onClick={() => handleSelectForEdit(i)}
-                  className={`cursor-pointer ${selected === i ? 'bg-green-50' : i % 2 === 1 ? 'bg-gray-50' : ''} hover:bg-green-50`}
+                  onClick={() => setSelected(i === selected ? null : i)}
+                  className={`cursor-pointer ${selected === i ? 'bg-orange-100' : i % 2 === 1 ? 'bg-gray-50' : ''} hover:bg-orange-50`}
                 >
                   <td className="px-4 py-2 text-gray-600">{c.course}</td>
                   <td className="px-4 py-2 text-gray-600">{c.schedule}</td>
@@ -223,19 +280,24 @@ const VendorPanel = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-2 font-semibold text-gray-700">Message</th>
-                <th className="text-left px-4 py-2 font-semibold text-gray-700">Date</th>
+                <th className="text-left px-4 py-2 font-semibold text-gray-700">Datetime</th>
+                <th className="text-left px-4 py-2 font-semibold text-gray-700">Content</th>
               </tr>
             </thead>
             <tbody>
               {notifications.map((n, i) => {
                 const isSelected = selectedNotif === i;
                 const isFlagged = flaggedNotifs.has(i);
-                const rowClass = isSelected ? 'bg-blue-50' : isFlagged ? 'bg-yellow-50' : i % 2 === 1 ? 'bg-gray-50' : '';
+                const rowClass = isSelected ? 'bg-orange-100' : i % 2 === 1 ? 'bg-gray-50' : '';
                 return (
-                  <tr key={i} onClick={() => setSelectedNotif(i)} className={`cursor-pointer ${rowClass} hover:bg-blue-50`}>
-                    <td className={`px-4 py-2 ${isFlagged ? 'font-medium text-yellow-800' : 'text-gray-600'}`}>{n.message}</td>
-                    <td className={`px-4 py-2 whitespace-nowrap ${isFlagged ? 'font-medium text-yellow-800' : 'text-gray-600'}`}>{n.date}</td>
+                  <tr key={i} onClick={() => setSelectedNotif(i)} className={`cursor-pointer ${rowClass} hover:bg-orange-50`}>
+                    <td className="px-4 py-2 whitespace-nowrap text-gray-600">{n.datetime}</td>
+                    <td className="px-4 py-2 text-gray-600">
+                      <span className="flex items-center justify-between">
+                        <span>{n.content}</span>
+                        {isFlagged && <span className="text-red-500 text-xs ml-2">🚩</span>}
+                      </span>
+                    </td>
                   </tr>
                 );
               })}
@@ -275,7 +337,7 @@ const VendorPanel = () => {
 
       </div>
 
-      {/* Manage Memberships */}
+      {/* Manage Member Memberships */}
       <div className="px-8 pb-8">
         <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
           <div className={cardHeader}>Manage Member Memberships</div>
@@ -295,9 +357,9 @@ const VendorPanel = () => {
                   <td className="px-4 py-2 text-gray-500">{m.email}</td>
                   <td className="px-4 py-2">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      m.membershipStatus === 'Active' ? 'bg-green-100 text-green-700' :
-                      m.membershipStatus === 'Expired' ? 'bg-red-100 text-red-600' :
-                      'bg-yellow-100 text-yellow-700'
+                      m.membershipStatus === 'Active'  ? 'bg-green-100 text-green-700' :
+                      m.membershipStatus === 'Expired' ? 'bg-red-100 text-red-600'     :
+                                                         'bg-yellow-100 text-yellow-700'
                     }`}>
                       {m.membershipStatus || 'Trial'}
                     </span>
@@ -320,6 +382,114 @@ const VendorPanel = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Workout Plan Builder */}
+      <div className="px-8 pb-8">
+        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+          <div className={cardHeader}>Workout Plan Builder</div>
+          <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Left — Plan details */}
+            <div className="space-y-3">
+              <input
+                type="email"
+                placeholder="Member Email"
+                value={planForm.memberEmail}
+                onChange={e => setPlanForm({ ...planForm, memberEmail: e.target.value })}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                placeholder="Plan Title (e.g. 8-Week Strength)"
+                value={planForm.title}
+                onChange={e => setPlanForm({ ...planForm, title: e.target.value })}
+                className={inputClass}
+              />
+              <div className="flex gap-2">
+                <select
+                  value={planForm.difficulty}
+                  onChange={e => setPlanForm({ ...planForm, difficulty: e.target.value })}
+                  className={inputClass}
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Weeks"
+                  value={planForm.durationWeeks}
+                  onChange={e => setPlanForm({ ...planForm, durationWeeks: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+              <textarea
+                placeholder="Plan notes (optional)"
+                value={planForm.notes}
+                onChange={e => setPlanForm({ ...planForm, notes: e.target.value })}
+                rows={3}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            {/* Right — Exercises */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Exercises</p>
+              {exercises.map((ex, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    placeholder="Exercise name"
+                    value={ex.name}
+                    onChange={e => updateExercise(i, 'name', e.target.value)}
+                    className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Sets"
+                    value={ex.sets}
+                    onChange={e => updateExercise(i, 'sets', parseInt(e.target.value, 10))}
+                    className="w-14 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Reps"
+                    value={ex.reps}
+                    onChange={e => updateExercise(i, 'reps', e.target.value)}
+                    className="w-16 px-2 py-1.5 border border-gray-300 rounded text-sm text-gray-700 focus:outline-none focus:border-gym-green"
+                  />
+                  <button
+                    onClick={() => setExercises(prev => prev.filter((_, idx) => idx !== i))}
+                    className="text-red-400 hover:text-red-600 text-sm px-1"
+                  >✕</button>
+                </div>
+              ))}
+              <button
+                onClick={() => setExercises(prev => [...prev, { ...EMPTY_EXERCISE }])}
+                className="text-sm text-gym-green hover:underline mt-1"
+              >
+                + Add Exercise
+              </button>
+            </div>
+
+          </div>
+
+          <div className="flex items-center gap-4 px-4 pb-4 border-t border-gray-100 pt-3">
+            <button
+              onClick={handleAssignPlan}
+              className="px-5 py-1.5 bg-gym-green text-white rounded text-sm font-medium hover:opacity-90"
+            >
+              Assign Plan
+            </button>
+            {planStatus && (
+              <span className={`text-sm ${planStatus.includes('success') ? 'text-green-600' : 'text-red-500'}`}>
+                {planStatus}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
